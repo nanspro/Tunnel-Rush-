@@ -1,0 +1,2 @@
+HOW TO RUN
+-> Open index.html in browser to run the game
