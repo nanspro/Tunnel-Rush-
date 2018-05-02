@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WebGL Demo</title>
+
+  <link rel="stylesheet" href="../webgl.css" type="text/css">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.99.0/css/materialize.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.99.0/js/materialize.min.js"></script>
+  <style type="text/css">
+  body{
+    background-color: #000000;
+  }
+  h1{
+    color: #FFFFFF;
+    font-family:sans-serif;
+    font-size: ;
+  }
+
+  .container{
+    width: 100%
+  }
+
+  #main_div{
+    width: 100%;
+    float: left;
+    max-width: 100%
+  }
+
+  
+</style>
+
+</head>
+
+<body>
+  <header> 
+      <h1 align="center"> Tunnel Rush Rebuilt</h1>
+  </header>
+  
+  <div id="main_div" class="container">    
+    <div class="row">
+      <div class="white-text black col s3 card">
+          <br>
+          <br>
+          <br>
+          <br>
+          <br>
+          <br>
+          <br>
+          <br>
+          <br>
+          <br>
+          <h4 align="center" id="score_value">Score:</h4>
+          <h4 align="center" id="live_value">Lives:</h4>          
+          <h4 align="center" id="level_value">Level:</h4>
+
+          <br>
+          <br>
+          <br>
+          <br>
+
+
+          <form action="#">
+            <div align="center" class="switch">
+              <h4> Pause</h4>
+              <label>
+                Off
+                <input id="pause_box" type="checkbox">
+                <span class="lever"></span>
+                On
+              </label>
+            </div>
+
+            <div align="center" class="switch">
+              <h4> Mute</h4>
+              <label>
+                Off
+                <input id="mute_box" type="checkbox">
+                <span class="lever"></span>
+                On
+              </label>
+            </div>
+
+          </form>
+      </div>
+        
+      <div class="col s6 ">
+        <canvas id="glcanvas" width='1150' height='1200'></canvas>
+      </div>
+      
+    </div>
+    <div align="center" class="white-text black row card">
+      <div class="card-title">
+        <h4>Controls</h4>
+      </div>
+      <div class="card-content">
+        <ul style="font-size:30px">
+          <li>
+            Tunnel: Arrow Keys
+          </li>
+          <li>
+            Camera: A,D
+          </li>
+          <li>
+            Space: Jump
+          </li>
+          <li>
+            Pause: P
+          </li>
+          <li>
+            Mute: M
+          </li>
+          <li>
+            B: Backward
+          </li>
+          <li>
+            T: Teleport
+          </li>
+        </ul>
+      </div>
+    </div>  
+    <img src="./wallTexture.jpg" />
+    </div>  
+  </body>
+
+  <!-- Helper Libraries -->
+  <script src="gl-matrix.js"></script>
+  <script src="vector.js"></script>
+
+  <!-- Keyboard control -->
+  <script src="mousetrap.min.js"></script>
+  
+
+  <!-- Shaders -->
+  <script id="fragment_shader" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec3 vTransformedNormal;
+    varying vec4 vColor;
+    varying vec4 vPosition;
+    varying vec2 vTexture;
+
+    uniform sampler2D sampler;
+    uniform bool isTextured;
+
+    uniform float uMaterialShininess;
+
+    uniform vec3 uAmbientColor;
+    uniform vec3 uAmbientColorObject;
+    uniform vec3 uPointLightingLocation;
+    uniform vec3 uPointLightingSpecularColor;
+    uniform vec3 uPointLightingDiffuseColor;
+    uniform vec3 eyeLocation;
+
+
+    void main(void) {
+      vec3 lightWeighting;
+      vec3 uAmbientTotal = uAmbientColor * uAmbientColorObject;
+  // Diffuse lighting  
+
+  vec3 normal = normalize(vTransformedNormal);
+  vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
+
+  float diffuseLightWeighting = max(dot(normal, lightDirection), 0.0);
+
+  // Specular
+  float specularLightWeighting = 0.0;
+  float uMaterialShininess = 20.0;
+  
+  vec3 eyeDirection = normalize(eyeLocation-vPosition.xyz);
+  vec3 reflectionDirection = reflect(-lightDirection, normal);
+
+  specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+
+
+  lightWeighting = uAmbientTotal+ uPointLightingDiffuseColor*diffuseLightWeighting + specularLightWeighting*uPointLightingSpecularColor; 
+
+  vec4 fragmentColor;
+  if(isTextured){
+   fragmentColor = texture2D(sampler, vec2(vTexture.s, vTexture.t));
+    }
+  else{
+  fragmentColor = vColor;
+  }
+  
+  gl_FragColor = vec4(fragmentColor.rgb * lightWeighting,fragmentColor.a);
+
+}    
+</script>
+
+
+<script id="vertex_shader" type="x-shader/x-fragment">
+  attribute vec4 aVertexPosition;
+  attribute vec4 aVertexColor;
+  attribute vec3 aVertexNormal;
+  attribute vec2 aVertexTexture;
+
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
+  uniform mat3 uNMatrix;
+
+  varying vec4 vColor;
+  varying vec3 vTransformedNormal;
+  varying vec4 vPosition;
+  varying vec2 vTexture;
+
+  void main(void) {
+    vPosition = uModelViewMatrix * aVertexPosition;
+    gl_Position = uProjectionMatrix * vPosition;
+    vColor = aVertexColor;
+    vTransformedNormal = uNMatrix * aVertexNormal;
+    vTexture = aVertexTexture;
+  }
+</script>
+
+<!-- Basic Webgl Code -->
+<script src="cube.js"></script>
+<script src="pyramid.js"></script>
+
+<!-- For audio -->
+<script src="https://code.createjs.com/1.0.0/createjs.min.js" ></script>
+<script src="audioplay.js"></script>
+
+<!-- Main -->
+<script src="webgl-demo.js"></script>
+
+</html>
